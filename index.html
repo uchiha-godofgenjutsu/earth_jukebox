@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>The Earth Information Jukebox 🎵🌍</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            text-align: center; 
+            margin: 0; padding-top: 50px; 
+            background: #0b132b; 
+            color: #fff; 
+            transition: background 0.5s ease; 
+            overflow: hidden;
+        }
+        .container { 
+            background: rgba(20, 30, 60, 0.85); 
+            padding: 30px; 
+            border-radius: 20px; 
+            display: inline-block; 
+            box-shadow: 0 15px 35px rgba(0,0,0,0.8); 
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+            max-width: 500px;
+        }
+        /* Pulsing Planet Animation */
+        .planet {
+            width: 100px; height: 100px;
+            background: radial-gradient(circle at 30% 30%, #4facfe, #00f2fe);
+            border-radius: 50%;
+            margin: 0 auto 20px auto;
+            box-shadow: 0 0 30px rgba(0, 242, 254, 0.6);
+            transition: transform 0.2s ease, background 0.4s ease;
+        }
+        select, input[type=range] { width: 100%; margin: 15px 0; padding: 10px; border-radius: 8px; border: none; font-size: 16px; }
+        select { background: #1c2541; color: #fff; cursor: pointer; }
+        input[type=range] { cursor: pointer; background: transparent; }
+        button { padding: 12px 20px; font-size: 16px; background: #ff4757; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; margin: 5px; box-shadow: 0 4px 15px rgba(255, 71, 87, 0.4); }
+        button:hover { background: #ff6b81; }
+        .btn-audio { background: #2ed573; box-shadow: 0 4px 15px rgba(46, 213, 115, 0.4); }
+        .btn-audio:hover { background: #7bed9f; }
+        #display { font-size: 18px; margin-top: 15px; font-weight: bold; color: #fffa65; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Visual Element -->
+        <div class="planet" id="planetVisual"></div>
+
+        <h1>🌍 Earth Jukebox</h1>
+        <p style="font-size: 14px; color: #a4b0be;">NASA Earth Data Sonification for Everyone</p>
+        
+        <!-- Track Selection (Jukebox style) -->
+        <label style="font-size: 14px; color: #ced6e0;">Select Dataset Track:</label>
+        <select id="trackSelect">
+            <option value="temp">Global Temperature Anomaly (1950-2025)</option>
+            <option value="ice">Arctic Sea Ice Melting (1979-2025)</option>
+            <option value="co2">Carbon Dioxide Emissions (1960-2025)</option>
+        </select>
+
+        <br>
+        <button class="btn-audio" onclick="startAudio()">1. Start Audio Engine 🔊</button>
+        <br><br>
+
+        <!-- Timeline Slider -->
+        <label style="font-size: 14px;">Timeline Slider:</label>
+        <input type="range" id="yearSlider" min="1950" max="2025" value="1950" step="1" oninput="updateJukebox(this.value)">
+        
+        <div id="display">Year: 1950 | Drag slider to explore!</div>
+        <br>
+        
+        <!-- Accessibility Speech Button -->
+        <button onclick="speakData()">🗣️ Read Aloud (Accessibility)</button>
+    </div>
+
+    <script>
+        let audioCtx = null;
+        let oscillator = null;
+        let gainNode = null;
+
+        function startAudio() {
+            if (audioCtx) return;
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            oscillator = audioCtx.createOscillator();
+            gainNode = audioCtx.createGain();
+
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(250, audioCtx.currentTime);
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            oscillator.start();
+            alert("Audio Engine Started! Ab slider drag karo.");
+        }
+
+        function updateJukebox(year) {
+            let track = document.getElementById("trackSelect").value;
+            let minYear = (track === 'ice') ? 1979 : (track === 'co2' ? 1960 : 1950);
+            let progress = (year - minYear) / (2025 - minYear);
+            if (progress < 0) progress = 0;
+            if (progress > 1) progress = 1;
+
+            let minFreq = 150, maxFreq = 700;
+            if (track === 'ice') { minFreq = 600; maxFreq = 150; }
+            
+            let frequency = minFreq + progress * (maxFreq - minFreq);
+            if (audioCtx && oscillator) {
+                oscillator.frequency.setValueAtTime(frequency, audioCtx.currentTime);
+            }
+
+            let planet = document.getElementById("planetVisual");
+            let scale = 1 + (progress * 0.4);
+            planet.style.transform = `scale(${scale})`;
+
+            let red = Math.floor(15 + progress * 220);
+            let green = Math.floor(45 - progress * 30);
+            let blue = Math.floor(100 - progress * 60);
+            document.body.style.backgroundColor = `rgb(${Math.floor(red/3)}, ${Math.floor(green/2)}, ${blue})`;
+            
+            if (track === 'temp') {
+                planet.style.background = `radial-gradient(circle at 30% 30%, rgb(${red}, 100, 100), #570000)`;
+            } else if (track === 'ice') {
+                planet.style.background = `radial-gradient(circle at 30% 30%, #70a1ff, #1e90ff)`;
+            } else {
+                planet.style.background = `radial-gradient(circle at 30% 30%, #ffa502, #ff4757)`;
+            }
+
+            document.getElementById("display").innerText = `Year: ${year} | Track: ${track.toUpperCase()} | Freq: ${Math.round(frequency)}Hz`;
+        }
+
+        function speakData() {
+            let text = document.getElementById("display").innerText;
+            let speech = new SpeechSynthesisUtterance(text);
+            speech.lang = 'en-US';
+            window.speechSynthesis.speak(speech);
+        }
+    </script>
+
+</body>
+</html>
